@@ -29,12 +29,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <zlib.h>
+#include <errno.h>
 #include "bntseq.h"
 #include "main.h"
 #include "utils.h"
 
 #include "kseq.h"
-KSEQ_INIT(gzFile, gzread)
+KSEQ_INIT(gzFile, err_gzread)
 
 unsigned char nst_nt4_table[256] = {
 	4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4,  4, 4, 4, 4, 
@@ -63,25 +64,27 @@ void bns_dump(const bntseq_t *bns, const char *prefix)
 	{ // dump .ann
 		strcpy(str, prefix); strcat(str, ".ann");
 		fp = xopen(str, "w");
-		fprintf(fp, "%lld %d %u\n", (long long)bns->l_pac, bns->n_seqs, bns->seed);
+		err_fprintf(fp, "%lld %d %u\n", (long long)bns->l_pac, bns->n_seqs, bns->seed);
 		for (i = 0; i != bns->n_seqs; ++i) {
 			bntann1_t *p = bns->anns + i;
-			fprintf(fp, "%d %s", p->gi, p->name);
-			if (p->anno[0]) fprintf(fp, " %s\n", p->anno);
-			else fprintf(fp, "\n");
-			fprintf(fp, "%lld %d %d\n", (long long)p->offset, p->len, p->n_ambs);
+			err_fprintf(fp, "%d %s", p->gi, p->name);
+			if (p->anno[0]) err_fprintf(fp, " %s\n", p->anno);
+			else err_fprintf(fp, "\n");
+			err_fprintf(fp, "%lld %d %d\n", (long long)p->offset, p->len, p->n_ambs);
 		}
-		fclose(fp);
+		err_fflush(fp);
+		err_fclose(fp);
 	}
 	{ // dump .amb
 		strcpy(str, prefix); strcat(str, ".amb");
 		fp = xopen(str, "w");
-		fprintf(fp, "%lld %d %u\n", (long long)bns->l_pac, bns->n_seqs, bns->n_holes);
+		err_fprintf(fp, "%lld %d %u\n", (long long)bns->l_pac, bns->n_seqs, bns->n_holes);
 		for (i = 0; i != bns->n_holes; ++i) {
 			bntamb1_t *p = bns->ambs + i;
-			fprintf(fp, "%lld %d %c\n", (long long)p->offset, p->len, p->amb);
+			err_fprintf(fp, "%lld %d %c\n", (long long)p->offset, p->len, p->amb);
 		}
-		fclose(fp);
+		err_fflush(fp);
+		err_fclose(fp);
 	}
 }
 
@@ -89,13 +92,16 @@ bntseq_t *bns_restore_core(const char *ann_filename, const char* amb_filename, c
 {
 	char str[1024];
 	FILE *fp;
+	const char *fname;
 	bntseq_t *bns;
 	long long xx;
 	int i;
+	int scanres;
 	bns = (bntseq_t*)calloc(1, sizeof(bntseq_t));
 	{ // read .ann
-		fp = xopen(ann_filename, "r");
-		fscanf(fp, "%lld%d%u", &xx, &bns->n_seqs, &bns->seed);
+		fp = xopen(fname = ann_filename, "r");
+		scanres = fscanf(fp, "%lld%d%u", &xx, &bns->n_seqs, &bns->seed);
+		if (scanres != 3) goto badread;
 		bns->l_pac = xx;
 		bns->anns = (bntann1_t*)calloc(bns->n_seqs, sizeof(bntann1_t));
 		for (i = 0; i < bns->n_seqs; ++i) {
@@ -103,39 +109,54 @@ bntseq_t *bns_restore_core(const char *ann_filename, const char* amb_filename, c
 			char *q = str;
 			int c;
 			// read gi and sequence name
-			fscanf(fp, "%u%s", &p->gi, str);
+			scanres = fscanf(fp, "%u%s", &p->gi, str);
+			if (scanres != 2) goto badread;
 			p->name = strdup(str);
 			// read fasta comments 
-			while ((c = fgetc(fp)) != '\n' && c != EOF) *q++ = c;
+			while (str - q < sizeof(str) - 1 && (c = fgetc(fp)) != '\n' && c != EOF) *q++ = c;
+			while (c != '\n' && c != EOF) c = fgetc(fp);
+			if (c == EOF) {
+				scanres = EOF;
+				goto badread;
+			}
 			*q = 0;
 			if (q - str > 1) p->anno = strdup(str + 1); // skip leading space
 			else p->anno = strdup("");
 			// read the rest
-			fscanf(fp, "%lld%d%d", &xx, &p->len, &p->n_ambs);
+			scanres = fscanf(fp, "%lld%d%d", &xx, &p->len, &p->n_ambs);
+			if (scanres != 3) goto badread;
 			p->offset = xx;
 		}
-		fclose(fp);
+		err_fclose(fp);
 	}
 	{ // read .amb
 		int64_t l_pac;
 		int32_t n_seqs;
-		fp = xopen(amb_filename, "r");
-		fscanf(fp, "%lld%d%d", &xx, &n_seqs, &bns->n_holes);
+		fp = xopen(fname = amb_filename, "r");
+		scanres = fscanf(fp, "%lld%d%d", &xx, &n_seqs, &bns->n_holes);
+		if (scanres != 3) goto badread;
 		l_pac = xx;
 		xassert(l_pac == bns->l_pac && n_seqs == bns->n_seqs, "inconsistent .ann and .amb files.");
 		bns->ambs = (bntamb1_t*)calloc(bns->n_holes, sizeof(bntamb1_t));
 		for (i = 0; i < bns->n_holes; ++i) {
 			bntamb1_t *p = bns->ambs + i;
-			fscanf(fp, "%lld%d%s", &xx, &p->len, str);
+			scanres = fscanf(fp, "%lld%d%s", &xx, &p->len, str);
+			if (scanres != 3) goto badread;
 			p->offset = xx;
 			p->amb = str[0];
 		}
-		fclose(fp);
+		err_fclose(fp);
 	}
 	{ // open .pac
 		bns->fp_pac = xopen(pac_filename, "rb");
 	}
 	return bns;
+
+ badread:
+	if (EOF == scanres) {
+		err_fatal(__func__, "Error reading %s : %s\n", fname, ferror(fp) ? strerror(errno) : "Unexpected end of file");
+	}
+	err_fatal(__func__, "Parse error reading %s\n", fname);
 }
 
 bntseq_t *bns_restore(const char *prefix)
@@ -152,7 +173,7 @@ void bns_destroy(bntseq_t *bns)
 	if (bns == 0) return;
 	else {
 		int i;
-		if (bns->fp_pac) fclose(bns->fp_pac);
+		if (bns->fp_pac) err_fclose(bns->fp_pac);
 		free(bns->ambs);
 		for (i = 0; i < bns->n_seqs; ++i) {
 			free(bns->anns[i].name);
@@ -224,7 +245,7 @@ int64_t bns_fasta2bntseq(gzFile fp_fa, const char *prefix)
 			{ // fill buffer
 				if (c >= 4) c = lrand48()&0x3;
 				if (l_buf == 0x40000) {
-					fwrite(buf, 1, 0x10000, fp);
+					err_fwrite(buf, 1, 0x10000, fp);
 					memset(buf, 0, 0x10000);
 					l_buf = 0;
 				}
@@ -239,16 +260,17 @@ int64_t bns_fasta2bntseq(gzFile fp_fa, const char *prefix)
 	ret = bns->l_pac;
 	{ // finalize .pac file
 		ubyte_t ct;
-		fwrite(buf, 1, (l_buf>>2) + ((l_buf&3) == 0? 0 : 1), fp);
+		err_fwrite(buf, 1, (l_buf>>2) + ((l_buf&3) == 0? 0 : 1), fp);
 		// the following codes make the pac file size always (l_pac/4+1+1)
 		if (bns->l_pac % 4 == 0) {
 			ct = 0;
-			fwrite(&ct, 1, 1, fp);
+			err_fwrite(&ct, 1, 1, fp);
 		}
 		ct = bns->l_pac % 4;
-		fwrite(&ct, 1, 1, fp);
+		err_fwrite(&ct, 1, 1, fp);
 		// close .pac file
-		fclose(fp);
+		err_fflush(fp);
+		err_fclose(fp);
 	}
 	bns_dump(bns, prefix);
 	bns_destroy(bns);
@@ -265,7 +287,7 @@ int bwa_fa2pac(int argc, char *argv[])
 	}
 	fp = xzopen(argv[1], "r");
 	bns_fasta2bntseq(fp, (argc < 3)? argv[1] : argv[2]);
-	gzclose(fp);
+	err_gzclose(fp);
 	return 0;
 }
 

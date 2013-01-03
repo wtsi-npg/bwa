@@ -46,10 +46,10 @@ int64_t bwa_seq_len(const char *fn_pac)
 	int64_t pac_len;
 	ubyte_t c;
 	fp = xopen(fn_pac, "rb");
-	fseek(fp, -1, SEEK_END);
-	pac_len = ftell(fp);
-	fread(&c, 1, 1, fp);
-	fclose(fp);
+	err_fseek(fp, -1, SEEK_END);
+	pac_len = err_ftell(fp);
+	err_fread_noeof(&c, 1, 1, fp);
+	err_fclose(fp);
 	return (pac_len - 1) * 4 + (int)c;
 }
 
@@ -69,8 +69,8 @@ bwt_t *bwt_pac2bwt(const char *fn_pac, int use_is)
 	// prepare sequence
 	pac_size = (bwt->seq_len>>2) + ((bwt->seq_len&3) == 0? 0 : 1);
 	buf2 = (ubyte_t*)calloc(pac_size, 1);
-	fread(buf2, 1, pac_size, fp);
-	fclose(fp);
+	err_fread_noeof(buf2, 1, pac_size, fp);
+	err_fclose(fp);
 	memset(bwt->L2, 0, 5 * 4);
 	buf = (ubyte_t*)calloc(bwt->seq_len + 1, 1);
 	for (i = 0; i < bwt->seq_len; ++i) {
@@ -168,8 +168,8 @@ void bwa_pac_rev_core(const char *fn, const char *fn_rev)
 	bufin = (ubyte_t*)calloc(pac_len, 1);
 	bufout = (ubyte_t*)calloc(pac_len, 1);
 	fp = xopen(fn, "rb");
-	fread(bufin, 1, pac_len, fp);
-	fclose(fp);
+	err_fread_noeof(bufin, 1, pac_len, fp);
+	err_fclose(fp);
 	for (i = seq_len - 1, j = 0; i >= 0; --i) {
 		int c = bufin[i>>2] >> ((~i&3)<<1) & 3;
 		bwtint_t j = seq_len - 1 - i;
@@ -177,10 +177,11 @@ void bwa_pac_rev_core(const char *fn, const char *fn_rev)
 	}
 	free(bufin);
 	fp = xopen(fn_rev, "wb");
-	fwrite(bufout, 1, pac_len, fp);
+	err_fwrite(bufout, 1, pac_len, fp);
 	ct = seq_len % 4;
-	fwrite(&ct, 1, 1, fp);
-	fclose(fp);
+	err_fwrite(&ct, 1, 1, fp);
+	err_fflush(fp);
+	err_fclose(fp);
 	free(bufout);
 }
 
@@ -206,8 +207,8 @@ uint8_t *bwa_pac2cspac_core(const bntseq_t *bns)
 	int c1, c2;
 	pac = (uint8_t*)calloc(bns->l_pac/4 + 1, 1);
 	cspac = (uint8_t*)calloc(bns->l_pac/4 + 1, 1);
-	fread(pac, 1, bns->l_pac/4+1, bns->fp_pac);
-	rewind(bns->fp_pac);
+	err_fread_noeof(pac, 1, bns->l_pac/4+1, bns->fp_pac);
+	err_rewind(bns->fp_pac);
 	c1 = pac[0]>>6; cspac[0] = c1<<6;
 	for (i = 1; i < bns->l_pac; ++i) {
 		c2 = pac[i>>2] >> (~i&3)*2 & 3;
@@ -236,10 +237,11 @@ int bwa_pac2cspac(int argc, char *argv[])
 	str = (char*)calloc(strlen(argv[2]) + 5, 1);
 	strcat(strcpy(str, argv[2]), ".pac");
 	fp = xopen(str, "wb");
-	fwrite(cspac, 1, bns->l_pac/4 + 1, fp);
+	err_fwrite(cspac, 1, bns->l_pac/4 + 1, fp);
 	ct = bns->l_pac % 4;
-	fwrite(&ct, 1, 1, fp);	
-	fclose(fp);
+	err_fwrite(&ct, 1, 1, fp);
+	err_fflush(fp);
+	err_fclose(fp);
 	bns_destroy(bns);
 	free(cspac);
 	return 0;

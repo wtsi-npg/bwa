@@ -27,6 +27,7 @@
 #include <string.h>
 #include "bwt_gen.h"
 #include "QSufSort.h"
+#include "utils.h"
 
 static unsigned int TextLengthFromBytePacked(unsigned int bytePackedLength, unsigned int bitPerChar,
 											 unsigned int lastByteLength)
@@ -1407,13 +1408,13 @@ BWTInc *BWTIncConstructFromPacked(const char *inputFileName, const float targetN
 		exit(1);
 	}
 
-	fseek(packedFile, -1, SEEK_END);
-	packedFileLen = ftell(packedFile);
+	err_fseek(packedFile, -1, SEEK_END);
+	packedFileLen = err_ftell(packedFile);
 	if ((int)packedFileLen < 0) {
 		fprintf(stderr, "BWTIncConstructFromPacked: Cannot determine file length!\n");
 		exit(1);
 	}
-	fread(&lastByteLength, sizeof(unsigned char), 1, packedFile);
+	err_fread_noeof(&lastByteLength, sizeof(unsigned char), 1, packedFile);
 	totalTextLength = TextLengthFromBytePacked(packedFileLen, BIT_PER_CHAR, lastByteLength);
 
 	bwtInc = BWTIncCreate(totalTextLength, targetNBit, initialMaxBuildSize, incMaxBuildSize);
@@ -1427,10 +1428,10 @@ BWTInc *BWTIncConstructFromPacked(const char *inputFileName, const float targetN
 	}
 	textSizeInByte = textToLoad / CHAR_PER_BYTE;	// excluded the odd byte
 
-	fseek(packedFile, -2, SEEK_CUR);
-	fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
-	fread(bwtInc->textBuffer, sizeof(unsigned char), textSizeInByte + 1, packedFile);
-	fseek(packedFile, -((int)textSizeInByte + 1), SEEK_CUR);
+	err_fseek(packedFile, -2, SEEK_CUR);
+	err_fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
+	err_fread_noeof(bwtInc->textBuffer, sizeof(unsigned char), textSizeInByte + 1, packedFile);
+	err_fseek(packedFile, -((int)textSizeInByte + 1), SEEK_CUR);
 
 	ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
 	BWTIncConstruct(bwtInc, textToLoad);
@@ -1443,9 +1444,9 @@ BWTInc *BWTIncConstructFromPacked(const char *inputFileName, const float targetN
 			textToLoad = totalTextLength - processedTextLength;
 		}
 		textSizeInByte = textToLoad / CHAR_PER_BYTE;
-		fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
-		fread(bwtInc->textBuffer, sizeof(unsigned char), textSizeInByte, packedFile);
-		fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
+		err_fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
+		err_fread_noeof(bwtInc->textBuffer, sizeof(unsigned char), textSizeInByte, packedFile);
+		err_fseek(packedFile, -((int)textSizeInByte), SEEK_CUR);
 		ConvertBytePackedToWordPacked(bwtInc->textBuffer, bwtInc->packedText, ALPHABET_SIZE, textToLoad);
 		BWTIncConstruct(bwtInc, textToLoad);
 		processedTextLength += textToLoad;
@@ -1498,11 +1499,12 @@ void BWTSaveBwtCodeAndOcc(const BWT *bwt, const char *bwtFileName, const char *o
 		exit(1);
 	}
 
-	fwrite(&bwt->inverseSa0, sizeof(unsigned int), 1, bwtFile);
-	fwrite(bwt->cumulativeFreq + 1, sizeof(unsigned int), ALPHABET_SIZE, bwtFile);
+	err_fwrite(&bwt->inverseSa0, sizeof(unsigned int), 1, bwtFile);
+	err_fwrite(bwt->cumulativeFreq + 1, sizeof(unsigned int), ALPHABET_SIZE, bwtFile);
 	bwtLength = BWTFileSizeInWord(bwt->textLength);
-	fwrite(bwt->bwtCode, sizeof(unsigned int), bwtLength, bwtFile);
-	fclose(bwtFile);
+	err_fwrite(bwt->bwtCode, sizeof(unsigned int), bwtLength, bwtFile);
+	err_fflush(bwtFile);
+	err_fclose(bwtFile);
 /*
 	occValueFile = (FILE*)fopen(occValueFileName, "wb");
 	if (occValueFile == NULL) {

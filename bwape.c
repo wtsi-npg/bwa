@@ -244,14 +244,14 @@ int bwa_cal_pac_pos_pe(const char *prefix, bwt_t *const _bwt[2], int n_seqs, bwa
 			p[j]->n_multi = 0;
 			p[j]->extra_flag |= SAM_FPD | (j == 0? SAM_FR1 : SAM_FR2);
 
-			fread(&n_aln, 4, 1, fp_sa[j]);
+			err_fread_noeof(&n_aln, 4, 1, fp_sa[j]);
 
 			if (n_aln > kv_max(d[0]->aln[j]))
 				kv_resize(bwt_aln1_t, d[0]->aln[j], n_aln);
 
 			d[0]->aln[j].n = n_aln;
 
-			fread(d[0]->aln[j].a, sizeof(bwt_aln1_t), n_aln, fp_sa[j]);
+			err_fread_noeof(d[0]->aln[j].a, sizeof(bwt_aln1_t), n_aln, fp_sa[j]);
 
 			kv_copy(bwt_aln1_t, buf[j][i].aln, d[0]->aln[j]); // backup d[0]->aln[j]
 
@@ -550,8 +550,8 @@ ubyte_t *bwa_paired_sw(const bntseq_t *bns, const ubyte_t *_pacseq, int n_seqs, 
 	// load reference sequence
 	if (_pacseq == 0) {
 		pacseq = (ubyte_t*)calloc(bns->l_pac/4+1, 1);
-		rewind(bns->fp_pac);
-		fread(pacseq, 1, bns->l_pac/4+1, bns->fp_pac);
+		err_rewind(bns->fp_pac);
+		err_fread_noeof(pacseq, 1, bns->l_pac/4+1, bns->fp_pac);
 	} else pacseq = (ubyte_t*)_pacseq;
 	if (!popt->is_sw || ii->avg < 0.0) return pacseq;
 
@@ -686,10 +686,10 @@ void bwa_sai2sam_pe_core(const char *prefix, char *const fn_sa[2], char *const f
 #endif // ! _USE_LOCAL_GHASH
 	last_ii.avg = -1.0;
 
-	fread(&opt, sizeof(gap_opt_t), 1, fp_sa[0]);
+	err_fread_noeof(&opt, sizeof(gap_opt_t), 1, fp_sa[0]);
 	ks[0] = bwa_open_reads(opt.mode, fn_fa[0]);
 	opt0 = opt;
-	fread(&opt, sizeof(gap_opt_t), 1, fp_sa[1]); // overwritten!
+	err_fread_noeof(&opt, sizeof(gap_opt_t), 1, fp_sa[1]); // overwritten!
 	ks[1] = bwa_open_reads(opt.mode, fn_fa[1]);
 	if (!(opt.mode & BWA_MODE_COMPREAD)) {
 		popt->type = BWA_PET_SOLID;
@@ -701,8 +701,8 @@ void bwa_sai2sam_pe_core(const char *prefix, char *const fn_sa[2], char *const f
 			strcpy(str, prefix); strcat(str, ".rbwt"); bwt[1] = bwt_restore_bwt(str);
 			strcpy(str, prefix); strcat(str, ".rsa"); bwt_restore_sa(str, bwt[1]);
 			pac = (ubyte_t*)calloc(bns->l_pac/4+1, 1);
-			rewind(bns->fp_pac);
-			fread(pac, 1, bns->l_pac/4+1, bns->fp_pac);
+			err_rewind(bns->fp_pac);
+			err_fread_noeof(pac, 1, bns->l_pac/4+1, bns->fp_pac);
 		}
 	}
 
@@ -889,7 +889,7 @@ void bwa_sai2sam_pe_core(const char *prefix, char *const fn_sa[2], char *const f
 	if (ntbns) bns_destroy(ntbns);
 	for (i = 0; i < 2; ++i) {
 		bwa_seq_close(ks[i]);
-		fclose(fp_sa[i]);
+		err_fclose(fp_sa[i]);
 	}
 
 #ifndef _USE_LOCAL_GHASH
@@ -980,7 +980,7 @@ int bwa_sai2sam_pe(int argc, char *argv[])
 	}
 
 	bwa_sai2sam_pe_core(argv[optind], argv + optind + 1, argv + optind+3, popt);
-
+	err_fflush(stdout);
 	free(bwa_rg_line); free(bwa_rg_id);
 	free(popt);
 

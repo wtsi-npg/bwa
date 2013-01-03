@@ -3,12 +3,13 @@
 
 #include <stdint.h>
 #include <zlib.h>
+#include "utils.h"
 
 typedef gzFile bamFile;
-#define bam_open(fn, mode) gzopen(fn, mode)
+#define bam_open(fn, mode) xzopen(fn, mode)
 #define bam_dopen(fd, mode) gzdopen(fd, mode)
-#define bam_close(fp) gzclose(fp)
-#define bam_read(fp, buf, size) gzread(fp, buf, size)
+#define bam_close(fp) err_gzclose(fp)
+#define bam_read(fp, buf, size) err_gzread(fp, buf, size)
 
 typedef struct {
 	int32_t n_targets;

@@ -5,7 +5,7 @@
 #include "bamlite.h"
 
 #include "kseq.h"
-KSEQ_INIT(gzFile, gzread)
+KSEQ_INIT(gzFile, err_gzread)
 
 extern unsigned char nst_nt4_table[256];
 static char bam_nt16_nt4_table[] = { 4, 0, 1, 4, 2, 4, 4, 4, 3, 4, 4, 4, 4, 4, 4, 4 };
@@ -46,7 +46,7 @@ void bwa_seq_close(bwa_seqio_t *bs)
 	if (bs == 0) return;
 	if (bs->is_bam) bam_close(bs->fp);
 	else {
-		gzclose(bs->ks->f->f);
+		err_gzclose(bs->ks->f->f);
 		kseq_destroy(bs->ks);
 	}
 	free(bs);
