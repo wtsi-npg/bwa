@@ -61,18 +61,18 @@ bwt_t *bwt_pac2bwt(const char *fn_pac, int use_is)
 	FILE *fp;
 
 	// initialization
-	bwt = (bwt_t*)calloc(1, sizeof(bwt_t));
+	bwt = (bwt_t*)xcalloc(1, sizeof(bwt_t));
 	bwt->seq_len = bwa_seq_len(fn_pac);
 	bwt->bwt_size = (bwt->seq_len + 15) >> 4;
 	fp = xopen(fn_pac, "rb");
 
 	// prepare sequence
 	pac_size = (bwt->seq_len>>2) + ((bwt->seq_len&3) == 0? 0 : 1);
-	buf2 = (ubyte_t*)calloc(pac_size, 1);
+	buf2 = (ubyte_t*)xcalloc(pac_size, 1);
 	err_fread_noeof(buf2, 1, pac_size, fp);
 	err_fclose(fp);
 	memset(bwt->L2, 0, 5 * 4);
-	buf = (ubyte_t*)calloc(bwt->seq_len + 1, 1);
+	buf = (ubyte_t*)xcalloc(bwt->seq_len + 1, 1);
 	for (i = 0; i < bwt->seq_len; ++i) {
 		buf[i] = buf2[i>>2] >> ((3 - (i&3)) << 1) & 3;
 		++bwt->L2[1+buf[i]];
@@ -90,7 +90,7 @@ bwt_t *bwt_pac2bwt(const char *fn_pac, int use_is)
 		err_fatal_simple("libdivsufsort is not compiled in.");
 #endif
 	}
-	bwt->bwt = (u_int32_t*)calloc(bwt->bwt_size, 4);
+	bwt->bwt = (u_int32_t*)xcalloc(bwt->bwt_size, 4);
 	for (i = 0; i < bwt->seq_len; ++i)
 		bwt->bwt[i>>4] |= buf[i] << ((15 - (i&15)) << 1);
 	free(buf);
@@ -126,7 +126,7 @@ void bwt_bwtupdate_core(bwt_t *bwt)
 
 	n_occ = (bwt->seq_len + OCC_INTERVAL - 1) / OCC_INTERVAL + 1;
 	bwt->bwt_size += n_occ * 4; // the new size
-	buf = (uint32_t*)calloc(bwt->bwt_size, 4); // will be the new bwt
+	buf = (uint32_t*)xcalloc(bwt->bwt_size, 4); // will be the new bwt
 	c[0] = c[1] = c[2] = c[3] = 0;
 	for (i = k = 0; i < bwt->seq_len; ++i) {
 		if (i % OCC_INTERVAL == 0) {
@@ -165,8 +165,8 @@ void bwa_pac_rev_core(const char *fn, const char *fn_rev)
 	FILE *fp;
 	seq_len = bwa_seq_len(fn);
 	pac_len = (seq_len >> 2) + 1;
-	bufin = (ubyte_t*)calloc(pac_len, 1);
-	bufout = (ubyte_t*)calloc(pac_len, 1);
+	bufin = (ubyte_t*)xcalloc(pac_len, 1);
+	bufout = (ubyte_t*)xcalloc(pac_len, 1);
 	fp = xopen(fn, "rb");
 	err_fread_noeof(bufin, 1, pac_len, fp);
 	err_fclose(fp);
@@ -205,8 +205,8 @@ uint8_t *bwa_pac2cspac_core(const bntseq_t *bns)
 	uint8_t *pac, *cspac;
 	bwtint_t i;
 	int c1, c2;
-	pac = (uint8_t*)calloc(bns->l_pac/4 + 1, 1);
-	cspac = (uint8_t*)calloc(bns->l_pac/4 + 1, 1);
+	pac = (uint8_t*)xcalloc(bns->l_pac/4 + 1, 1);
+	cspac = (uint8_t*)xcalloc(bns->l_pac/4 + 1, 1);
 	err_fread_noeof(pac, 1, bns->l_pac/4+1, bns->fp_pac);
 	err_rewind(bns->fp_pac);
 	c1 = pac[0]>>6; cspac[0] = c1<<6;
@@ -234,7 +234,7 @@ int bwa_pac2cspac(int argc, char *argv[])
 	cspac = bwa_pac2cspac_core(bns);
 	bns_dump(bns, argv[2]);
 	// now write cspac
-	str = (char*)calloc(strlen(argv[2]) + 5, 1);
+	str = (char*)xcalloc(strlen(argv[2]) + 5, 1);
 	strcat(strcpy(str, argv[2]), ".pac");
 	fp = xopen(str, "wb");
 	err_fwrite(cspac, 1, bns->l_pac/4 + 1, fp);

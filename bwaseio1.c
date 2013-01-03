@@ -53,7 +53,7 @@ static void thr_bwa_read_seq1_tpx(long n_needed)
 
 		if (n_aln > m_aln_copy) {
 			m_aln_copy = n_aln;
-			*aln_addr = (bwt_aln1_t*)realloc(*aln_addr, sizeof(bwt_aln1_t) * m_aln_copy);
+			*aln_addr = (bwt_aln1_t*)xrealloc(*aln_addr, sizeof(bwt_aln1_t) * m_aln_copy);
 		}
 
 		err_fread_noeof(*aln_addr, sizeof(bwt_aln1_t), n_aln, fp_sa_addr);

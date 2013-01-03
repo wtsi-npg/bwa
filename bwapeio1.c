@@ -67,12 +67,12 @@ static void thr_bwa_read_seq2_tpx(long n_needed)
 
 	if(buf_nseqs[nexti_copy] == 0){
 		buf_nseqs[nexti_copy] = (long)n1;
-		*buf1_addr = (aln_buf_t*)calloc(buf_nseqs[nexti_copy], sizeof(aln_buf_t));
-		*buf2_addr = (aln_buf_t*)calloc(buf_nseqs[nexti_copy], sizeof(aln_buf_t));
+		*buf1_addr = (aln_buf_t*)xcalloc(buf_nseqs[nexti_copy], sizeof(aln_buf_t));
+		*buf2_addr = (aln_buf_t*)xcalloc(buf_nseqs[nexti_copy], sizeof(aln_buf_t));
 	}else if(buf_nseqs[nexti_copy] < (long)n1){
 		buf_nseqs[nexti_copy] = (long)n1;
-		*buf1_addr = (aln_buf_t*)realloc(*buf1_addr, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
-		*buf2_addr = (aln_buf_t*)realloc(*buf2_addr, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
+		*buf1_addr = (aln_buf_t*)xrealloc(*buf1_addr, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
+		*buf2_addr = (aln_buf_t*)xrealloc(*buf2_addr, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
 		memset(*buf1_addr, 0, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
 		memset(*buf2_addr, 0, (buf_nseqs[nexti_copy] * sizeof(aln_buf_t)));
 	}else{

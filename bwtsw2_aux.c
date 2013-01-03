@@ -47,7 +47,7 @@ extern int bsw2_resolve_query_overlaps(bwtsw2_t *b, float mask_level);
 
 bsw2opt_t *bsw2_init_opt()
 {
-	bsw2opt_t *o = (bsw2opt_t*)calloc(1, sizeof(bsw2opt_t));
+	bsw2opt_t *o = (bsw2opt_t*)xcalloc(1, sizeof(bsw2opt_t));
 	o->a = 1; o->b = 3; o->q = 5; o->r = 2; o->t = 30;
 	o->bw = 50;
 	o->z = 1; o->is = 3; o->t_seeds = 5; o->hard_clip = 0;
@@ -86,10 +86,10 @@ void bsw2_extend_left(const bsw2opt_t *opt, bwtsw2_t *b, uint8_t *_query, int lq
 
 	par.matrix = matrix;
 	__gen_ap(par, opt);
-	query = calloc(lq, 1);
+	query = xcalloc(lq, 1);
 	// sort according to the descending order of query end
 	ks_introsort(hit, b->n, b->hits);
-	target = calloc(((lq + 1) / 2 * opt->a + opt->r) / opt->r + lq, 1);
+	target = xcalloc(((lq + 1) / 2 * opt->a + opt->r) / opt->r + lq, 1);
 	// reverse _query
 	for (i = 0; i < lq; ++i) query[lq - i - 1] = _query[i];
 	// core loop
@@ -137,7 +137,7 @@ void bsw2_extend_rght(const bsw2opt_t *opt, bwtsw2_t *b, uint8_t *query, int lq,
 	
 	par.matrix = matrix;
 	__gen_ap(par, opt);
-	target = calloc(((lq + 1) / 2 * opt->a + opt->r) / opt->r + lq, 1);
+	target = xcalloc(((lq + 1) / 2 * opt->a + opt->r) / opt->r + lq, 1);
 	for (i = 0; i < b->n; ++i) {
 		bsw2hit_t *p = b->hits + i;
 		int lt = ((lq - p->beg + 1) / 2 * opt->a + opt->r) / opt->r + lq;
@@ -174,17 +174,17 @@ static void gen_cigar(const bsw2opt_t *opt, int lq, uint8_t *seq[2], uint8_t *pa
 	par.matrix = matrix;
 	__gen_ap(par, opt);
 	i = ((lq + 1) / 2 * opt->a + opt->r) / opt->r + lq; // maximum possible target length
-	target = calloc(i, 1);
-	path = calloc(i + lq, sizeof(path_t));
+	target = xcalloc(i, 1);
+	path = xcalloc(i + lq, sizeof(path_t));
 	// memory clean up for b
 	if (b->n < b->max) {
-		b->max = b->n;
-		b->hits = realloc(b->hits, b->n * sizeof(bsw2hit_t));
+		b->max = b->n > 0 ? b->n : 1;
+		b->hits = xrealloc(b->hits, b->max * sizeof(bsw2hit_t));
 	}
 	if (b->cigar) free(b->cigar);
 	if (b->n_cigar) free(b->n_cigar);
-	b->cigar = (uint32_t**)calloc(b->max, sizeof(void*));
-	b->n_cigar = (int*)calloc(b->max, sizeof(int));
+	b->cigar = (uint32_t**)xcalloc(b->max, sizeof(void*));
+	b->n_cigar = (int*)xcalloc(b->max, sizeof(int));
 	// generate CIGAR
 	for (i = 0; i < b->n; ++i) {
 		bsw2hit_t *p = b->hits + i;
@@ -200,7 +200,7 @@ static void gen_cigar(const bsw2opt_t *opt, int lq, uint8_t *seq[2], uint8_t *pa
 		score = aln_global_core(target, p->len, query, end - beg, &par, path, &path_len);
 		b->cigar[i] = aln_path2cigar32(path, path_len, &b->n_cigar[i]);
 		if (beg != 0 || end < lq) { // write soft clipping
-			b->cigar[i] = realloc(b->cigar[i], 4 * (b->n_cigar[i] + 2));
+			b->cigar[i] = xrealloc(b->cigar[i], 4 * (b->n_cigar[i] + 2));
 			if (beg != 0) {
 				memmove(b->cigar[i] + 1, b->cigar[i], b->n_cigar[i] * 4);
 				b->cigar[i][0] = beg<<4 | 4;
@@ -232,7 +232,7 @@ static void merge_hits(bwtsw2_t *b[2], int l, int is_reverse)
 	int i;
 	if (b[0]->n + b[1]->n > b[0]->max) {
 		b[0]->max = b[0]->n + b[1]->n;
-		b[0]->hits = realloc(b[0]->hits, b[0]->max * sizeof(bsw2hit_t));
+		b[0]->hits = xrealloc(b[0]->hits, b[0]->max * sizeof(bsw2hit_t));
 	}
 	for (i = 0; i < b[1]->n; ++i) {
 		bsw2hit_t *p = b[0]->hits + b[0]->n + i;
@@ -330,7 +330,7 @@ static int fix_cigar(const char *qname, const bntseq_t *bns, bsw2hit_t *p, int n
 		int j, nc, mq[2], nlen[2];
 		uint32_t *cn, kk = 0;
 		nc = mq[0] = mq[1] = nlen[0] = nlen[1] = 0;
-		cn = calloc(n_cigar + 3, 4);
+		cn = xcalloc(n_cigar + 3, 4);
 		x = coor; y = 0;
 		for (i = j = 0; i < n_cigar; ++i) {
 			int op = cigar[i]&0xf, ln = cigar[i]>>4;
@@ -474,7 +474,7 @@ static void bsw2_aln_core(int tid, bsw2seq_t *_seq, const bsw2opt_t *_opt, const
 		if (pool->max_l < l) { // then enlarge working space for aln_extend_core()
 			int tmp = ((l + 1) / 2 * opt.a + opt.r) / opt.r + l;
 			pool->max_l = l;
-			pool->aln_mem = realloc(pool->aln_mem, (tmp + 2) * 24);
+			pool->aln_mem = xrealloc(pool->aln_mem, (tmp + 2) * 24);
 		}
 		// set opt->bw
 		opt.bw = _opt->bw;
@@ -484,7 +484,7 @@ static void bsw2_aln_core(int tid, bsw2seq_t *_seq, const bsw2opt_t *_opt, const
 		if (k < 1) k = 1; // I do not know if k==0 causes troubles
 		opt.bw = _opt->bw < k? _opt->bw : k;
 		// set seq[2] and rseq[2]
-		seq[0] = calloc(l * 4, 1);
+		seq[0] = xcalloc(l * 4, 1);
 		seq[1] = seq[0] + l;
 		rseq[0] = seq[1] + l; rseq[1] = rseq[0] + l;
 		// convert sequences to 2-bit representation
@@ -563,8 +563,8 @@ static void process_seqs(bsw2seq_t *_seq, const bsw2opt_t *opt, const bntseq_t *
 		int j;
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-		data = (thread_aux_t*)calloc(opt->n_threads, sizeof(thread_aux_t));
-		tid = (pthread_t*)calloc(opt->n_threads, sizeof(pthread_t));
+		data = (thread_aux_t*)xcalloc(opt->n_threads, sizeof(thread_aux_t));
+		tid = (pthread_t*)xcalloc(opt->n_threads, sizeof(pthread_t));
 		for (j = 0; j < opt->n_threads; ++j) {
 			thread_aux_t *p = data + j;
 			p->tid = j; p->_seq = _seq; p->_opt = opt; p->bns = bns;
@@ -598,7 +598,7 @@ void bsw2_aln(const bsw2opt_t *opt, const bntseq_t *bns, bwt_t * const target[2]
 	uint8_t *pac;
 	bsw2seq_t *_seq;
 
-	pac = calloc(bns->l_pac/4+1, 1);
+	pac = xcalloc(bns->l_pac/4+1, 1);
 	if (pac == 0) {
 		fprintf(stderr, "[bsw2_aln] insufficient memory!\n");
 		return;
@@ -608,19 +608,19 @@ void bsw2_aln(const bsw2opt_t *opt, const bntseq_t *bns, bwt_t * const target[2]
 	err_fread_noeof(pac, 1, bns->l_pac/4+1, bns->fp_pac);
 	fp = xzopen(fn, "r");
 	ks = kseq_init(fp);
-	_seq = calloc(1, sizeof(bsw2seq_t));
+	_seq = xcalloc(1, sizeof(bsw2seq_t));
 	while ((l = kseq_read(ks)) >= 0) {
 		bsw2seq1_t *p;
 		if (_seq->n == _seq->max) {
 			_seq->max = _seq->max? _seq->max<<1 : 1024;
-			_seq->seq = realloc(_seq->seq, _seq->max * sizeof(bsw2seq1_t));
+			_seq->seq = xrealloc(_seq->seq, _seq->max * sizeof(bsw2seq1_t));
 		}
 		p = &_seq->seq[_seq->n++];
 		p->tid = -1;
 		p->l = l;
-		p->name = strdup(ks->name.s);
-		p->seq = strdup(ks->seq.s);
-		p->qual = ks->qual.l? strdup(ks->qual.s) : 0;
+		p->name = xstrdup(ks->name.s);
+		p->seq = xstrdup(ks->seq.s);
+		p->qual = ks->qual.l? xstrdup(ks->qual.s) : 0;
 		p->sam = 0;
 		size += l;
 		if (size > opt->chunk_size) {

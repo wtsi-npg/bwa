@@ -43,7 +43,7 @@ void bwt_restore_sa(const char *fn, bwt_t *bwt)
 	xassert(primary == bwt->seq_len, "SA-BWT inconsistency: seq_len is not the same.");
 
 	bwt->n_sa = (bwt->seq_len + bwt->sa_intv) / bwt->sa_intv;
-	bwt->sa = (bwtint_t*)calloc(bwt->n_sa, sizeof(bwtint_t));
+	bwt->sa = (bwtint_t*)xcalloc(bwt->n_sa, sizeof(bwtint_t));
 	bwt->sa[0] = -1;
 
 	err_fread_noeof(bwt->sa + 1, sizeof(bwtint_t), bwt->n_sa - 1, fp);
@@ -55,11 +55,11 @@ bwt_t *bwt_restore_bwt(const char *fn)
 	bwt_t *bwt;
 	FILE *fp;
 
-	bwt = (bwt_t*)calloc(1, sizeof(bwt_t));
+	bwt = (bwt_t*)xcalloc(1, sizeof(bwt_t));
 	fp = xopen(fn, "rb");
 	err_fseek(fp, 0, SEEK_END);
 	bwt->bwt_size = (err_ftell(fp) - sizeof(bwtint_t) * 5) >> 2;
-	bwt->bwt = (uint32_t*)calloc(bwt->bwt_size, 4);
+	bwt->bwt = (uint32_t*)xcalloc(bwt->bwt_size, 4);
 	err_fseek(fp, 0, SEEK_SET);
 	err_fread_noeof(&bwt->primary, sizeof(bwtint_t), 1, fp);
 	err_fread_noeof(bwt->L2+1, sizeof(bwtint_t), 4, fp);

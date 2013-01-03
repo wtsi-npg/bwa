@@ -25,7 +25,7 @@ extern int adj_n_needed;
 gap_opt_t *gap_init_opt()
 {
 	gap_opt_t *o;
-	o = (gap_opt_t*)calloc(1, sizeof(gap_opt_t));
+	o = (gap_opt_t*)xcalloc(1, sizeof(gap_opt_t));
 	/* IMPORTANT: s_mm*10 should be about the average base error
 	   rate. Voilating this requirement will break pairing! */
 	o->s_mm = 3; o->s_gapo = 11; o->s_gape = 4;
@@ -96,8 +96,8 @@ void bwa_cal_sa_reg_gap(int tid, bwt_t *const bwt[2], int n_seqs, bwa_seq_t *seq
 	if (local_opt.max_diff < local_opt.max_gapo) local_opt.max_gapo = local_opt.max_diff;
 	stack = gap_init_stack(local_opt.max_diff, local_opt.max_gapo, local_opt.max_gape, &local_opt);
 
-	seed_w[0] = (bwt_width_t*)calloc(opt->seed_len+1, sizeof(bwt_width_t));
-	seed_w[1] = (bwt_width_t*)calloc(opt->seed_len+1, sizeof(bwt_width_t));
+	seed_w[0] = (bwt_width_t*)xcalloc(opt->seed_len+1, sizeof(bwt_width_t));
+	seed_w[1] = (bwt_width_t*)xcalloc(opt->seed_len+1, sizeof(bwt_width_t));
 	w[0] = w[1] = 0;
 	for (i = 0; i != n_seqs; ++i) {
 		bwa_seq_t *p = seqs + i;
@@ -108,8 +108,8 @@ void bwa_cal_sa_reg_gap(int tid, bwt_t *const bwt[2], int n_seqs, bwa_seq_t *seq
 		seq[0] = p->seq; seq[1] = p->rseq;
 		if (max_l < p->len) {
 			max_l = p->len;
-			w[0] = (bwt_width_t*)realloc(w[0], (max_l + 1) * sizeof(bwt_width_t));
-			w[1] = (bwt_width_t*)realloc(w[1], (max_l + 1) * sizeof(bwt_width_t));
+			w[0] = (bwt_width_t*)xrealloc(w[0], (max_l + 1) * sizeof(bwt_width_t));
+			w[1] = (bwt_width_t*)xrealloc(w[1], (max_l + 1) * sizeof(bwt_width_t));
 			memset(w[0], 0, (max_l + 1) * sizeof(bwt_width_t));
 			memset(w[1], 0, (max_l + 1) * sizeof(bwt_width_t));
 		}
@@ -194,7 +194,7 @@ void bwa_aln_core(const char *prefix, const char *fn_fa, const gap_opt_t *opt)
 	ks = bwa_open_reads(opt->mode, fn_fa);
 
 	{ // load BWT
-		char *str = (char*)calloc(strlen(prefix) + 10, 1);
+		char *str = (char*)xcalloc(strlen(prefix) + 10, 1);
 		strcpy(str, prefix); strcat(str, ".bwt");  bwt[0] = bwt_restore_bwt(str);
 		strcpy(str, prefix); strcat(str, ".rbwt"); bwt[1] = bwt_restore_bwt(str);
 		free(str);
@@ -218,8 +218,8 @@ void bwa_aln_core(const char *prefix, const char *fn_fa, const gap_opt_t *opt)
 			int j;
 			pthread_attr_init(&attr);
 			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-			data = (thread_aux_t*)calloc(opt->n_threads, sizeof(thread_aux_t));
-			tid = (pthread_t*)calloc(opt->n_threads, sizeof(pthread_t));
+			data = (thread_aux_t*)xcalloc(opt->n_threads, sizeof(thread_aux_t));
+			tid = (pthread_t*)xcalloc(opt->n_threads, sizeof(pthread_t));
 			for (j = 0; j < opt->n_threads; ++j) {
 				data[j].tid = j; data[j].bwt[0] = bwt[0]; data[j].bwt[1] = bwt[1];
 				data[j].n_seqs = n_seqs; data[j].seqs = seqs; data[j].opt = opt;
