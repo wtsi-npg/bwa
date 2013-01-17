@@ -54,38 +54,45 @@ clean:cleanlocal-recur
 
 # DO NOT DELETE
 
-bamlite.o: bamlite.h
-bntseq.o: bntseq.h main.h utils.h kseq.h
-bwape.o: bwtaln.h bwt.h stdaln.h kvec.h bntseq.h utils.h bwatpx.h kstring.h
-bwape.o: khash.h ksort.h
-bwape1.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h khash.h
-bwape1.o: ksort.h
-bwape2.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwape3.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwape4.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwapeio1.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwapese1.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwase.o: stdaln.h bwase.h bntseq.h bwt.h bwtaln.h utils.h kstring.h bwatpx.h
-bwase.o: kvec.h
-bwase1.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwase4.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwaseio1.o: bwatpx.h bwtaln.h bwt.h stdaln.h bntseq.h kvec.h kstring.h
-bwaseqio.o: bwtaln.h bwt.h stdaln.h utils.h bamlite.h kseq.h
-bwt.o: utils.h bwt.h
-bwt_lite.o: bwt_lite.h
-bwtaln.o: bwtaln.h bwt.h stdaln.h bwtgap.h utils.h
-bwtgap.o: bwtgap.h bwt.h bwtaln.h stdaln.h
+bamlite.o: bamlite.h utils.h
+bntseq.o: bntseq.h kseq.h main.h utils.h
+bwape.o: bntseq.h bwatpx.h bwt.h bwtaln.h khash.h ksort.h kstring.h kvec.h
+bwape.o: stdaln.h utils.h
+bwape1.o: bntseq.h bwatpx.h bwt.h bwtaln.h khash.h ksort.h kstring.h kvec.h
+bwape1.o: stdaln.h utils.h
+bwape2.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwape3.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwape4.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwapeio1.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h
+bwapeio1.o: utils.h
+bwapese1.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h
+bwapese1.o: utils.h
+bwase.o: bntseq.h bwase.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h
+bwase.o: utils.h
+bwase1.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwase4.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwaseio1.o: bntseq.h bwatpx.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h
+bwaseio1.o: utils.h
+bwaseqio.o: bamlite.h bwt.h bwtaln.h kseq.h stdaln.h utils.h
+bwatpx.o: bntseq.h bwt.h bwtaln.h kstring.h kvec.h stdaln.h utils.h
+bwt.o: bwt.h utils.h
+bwt_lite.o: bwt_lite.h utils.h
+bwtaln.o: bwt.h bwtaln.h bwtgap.h stdaln.h utils.h
+bwtgap.o: bwt.h bwtaln.h bwtgap.h stdaln.h utils.h
 bwtindex.o: bntseq.h bwt.h main.h utils.h
 bwtio.o: bwt.h utils.h
-bwtmisc.o: bntseq.h utils.h main.h bwt.h
-bwtsw2_aux.o: bntseq.h bwt_lite.h utils.h bwtsw2.h bwt.h stdaln.h kstring.h
-bwtsw2_aux.o: kseq.h ksort.h
-bwtsw2_chain.o: bwtsw2.h bntseq.h bwt_lite.h bwt.h ksort.h
-bwtsw2_core.o: bwt_lite.h bwtsw2.h bntseq.h bwt.h kvec.h khash.h ksort.h
-bwtsw2_main.o: bwt.h bwtsw2.h bntseq.h bwt_lite.h utils.h
-cs2nt.o: bwtaln.h bwt.h stdaln.h
-kstring.o: kstring.h
-main.o: main.h
-simple_dp.o: stdaln.h utils.h kseq.h
-stdaln.o: stdaln.h
+bwtmisc.o: bntseq.h bwt.h main.h utils.h
+bwtsw2.o: bntseq.h bwt.h bwt_lite.h
+bwtsw2_aux.o: bntseq.h bwt.h bwt_lite.h bwtsw2.h kseq.h ksort.h kstring.h
+bwtsw2_aux.o: stdaln.h utils.h
+bwtsw2_chain.o: bntseq.h bwt.h bwt_lite.h bwtsw2.h ksort.h utils.h
+bwtsw2_core.o: bntseq.h bwt.h bwt_lite.h bwtsw2.h khash.h ksort.h kvec.h
+bwtsw2_core.o: utils.h
+bwtsw2_main.o: bntseq.h bwt.h bwt_lite.h bwtsw2.h utils.h
+cs2nt.o: bwt.h bwtaln.h stdaln.h utils.h
+is.o: utils.h
+kstring.o: kstring.h utils.h
+main.o: main.h utils.h
+simple_dp.o: kseq.h stdaln.h utils.h
+stdaln.o: stdaln.h utils.h
 utils.o: utils.h

@@ -67,13 +67,14 @@ void bwa_print_sam_PG()
 		return;
 	}
 
-	printf("@PG\tID:bwa\tPN:bwa\tVN:%s\n", PACKAGE_VERSION);
+	err_printf("@PG\tID:bwa\tPN:bwa\tVN:%s\n", PACKAGE_VERSION);
 }
 
 int main(int argc, char *argv[])
 {
 	struct timeval st;
 	int j;
+	int ret;
 
 	if (argc < 2) return usage();
 
@@ -94,25 +95,28 @@ int main(int argc, char *argv[])
 
 	// -------------------
 
-	if (strcmp(argv[1], "fa2pac") == 0) return bwa_fa2pac(argc-1, argv+1);
-	else if (strcmp(argv[1], "pac2bwt") == 0) return bwa_pac2bwt(argc-1, argv+1);
-	else if (strcmp(argv[1], "pac2bwtgen") == 0) return bwt_bwtgen_main(argc-1, argv+1);
-	else if (strcmp(argv[1], "bwtupdate") == 0) return bwa_bwtupdate(argc-1, argv+1);
-	else if (strcmp(argv[1], "pac_rev") == 0) return bwa_pac_rev(argc-1, argv+1);
-	else if (strcmp(argv[1], "bwt2sa") == 0) return bwa_bwt2sa(argc-1, argv+1);
-	else if (strcmp(argv[1], "index") == 0) return bwa_index(argc-1, argv+1);
-	else if (strcmp(argv[1], "aln") == 0) return bwa_aln(argc-1, argv+1);
-	else if (strcmp(argv[1], "sw") == 0) return bwa_stdsw(argc-1, argv+1);
-	else if (strcmp(argv[1], "samse") == 0) return bwa_sai2sam_se(argc-1, argv+1);
-	else if (strcmp(argv[1], "sampe") == 0) return bwa_sai2sam_pe(argc-1, argv+1);
-	else if (strcmp(argv[1], "pac2cspac") == 0) return bwa_pac2cspac(argc-1, argv+1);
-	else if (strcmp(argv[1], "stdsw") == 0) return bwa_stdsw(argc-1, argv+1);
-	else if (strcmp(argv[1], "bwtsw2") == 0) return bwa_bwtsw2(argc-1, argv+1);
-	else if (strcmp(argv[1], "dbwtsw") == 0) return bwa_bwtsw2(argc-1, argv+1);
-	else if (strcmp(argv[1], "bwasw") == 0) return bwa_bwtsw2(argc-1, argv+1);
+	if (strcmp(argv[1], "fa2pac") == 0) ret =  bwa_fa2pac(argc-1, argv+1);
+	else if (strcmp(argv[1], "pac2bwt") == 0) ret =  bwa_pac2bwt(argc-1, argv+1);
+	else if (strcmp(argv[1], "pac2bwtgen") == 0) ret =  bwt_bwtgen_main(argc-1, argv+1);
+	else if (strcmp(argv[1], "bwtupdate") == 0) ret =  bwa_bwtupdate(argc-1, argv+1);
+	else if (strcmp(argv[1], "pac_rev") == 0) ret =  bwa_pac_rev(argc-1, argv+1);
+	else if (strcmp(argv[1], "bwt2sa") == 0) ret =  bwa_bwt2sa(argc-1, argv+1);
+	else if (strcmp(argv[1], "index") == 0) ret =  bwa_index(argc-1, argv+1);
+	else if (strcmp(argv[1], "aln") == 0) ret =  bwa_aln(argc-1, argv+1);
+	else if (strcmp(argv[1], "sw") == 0) ret =  bwa_stdsw(argc-1, argv+1);
+	else if (strcmp(argv[1], "samse") == 0) ret =  bwa_sai2sam_se(argc-1, argv+1);
+	else if (strcmp(argv[1], "sampe") == 0) ret =  bwa_sai2sam_pe(argc-1, argv+1);
+	else if (strcmp(argv[1], "pac2cspac") == 0) ret =  bwa_pac2cspac(argc-1, argv+1);
+	else if (strcmp(argv[1], "stdsw") == 0) ret =  bwa_stdsw(argc-1, argv+1);
+	else if (strcmp(argv[1], "bwtsw2") == 0) ret =  bwa_bwtsw2(argc-1, argv+1);
+	else if (strcmp(argv[1], "dbwtsw") == 0) ret =  bwa_bwtsw2(argc-1, argv+1);
+	else if (strcmp(argv[1], "bwasw") == 0) ret =  bwa_bwtsw2(argc-1, argv+1);
 	else {
 		fprintf(stderr, "[main] unrecognized command '%s'\n", argv[1]);
 		return 1;
 	}
-	return 0;
+
+	err_fflush(stdout);
+
+	return ret;
 }

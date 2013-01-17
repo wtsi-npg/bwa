@@ -3,6 +3,7 @@
 #include <string.h>
 #include "bwtgap.h"
 #include "bwtaln.h"
+#include "utils.h"
 
 #define STATE_M 0
 #define STATE_I 1
@@ -14,13 +15,13 @@ gap_stack_t *gap_init_stack(int max_mm, int max_gapo, int max_gape, const gap_op
 {
 	int i;
 	gap_stack_t *stack;
-	stack = (gap_stack_t*)calloc(1, sizeof(gap_stack_t));
+	stack = (gap_stack_t*)xcalloc(1, sizeof(gap_stack_t));
 	stack->n_stacks = aln_score(max_mm+1, max_gapo+1, max_gape+1, opt);
-	stack->stacks = (gap_stack1_t*)calloc(stack->n_stacks, sizeof(gap_stack1_t));
+	stack->stacks = (gap_stack1_t*)xcalloc(stack->n_stacks, sizeof(gap_stack1_t));
 	for (i = 0; i != stack->n_stacks; ++i) {
 		gap_stack1_t *p = stack->stacks + i;
 		p->m_entries = 4;
-		p->stack = (gap_entry_t*)calloc(p->m_entries, sizeof(gap_entry_t));
+		p->stack = (gap_entry_t*)xcalloc(p->m_entries, sizeof(gap_entry_t));
 	}
 	return stack;
 }
@@ -52,7 +53,7 @@ static inline void gap_push(gap_stack_t *stack, int a, int i, bwtint_t k, bwtint
 	q = stack->stacks + score;
 	if (q->n_entries == q->m_entries) {
 		q->m_entries <<= 1;
-		q->stack = (gap_entry_t*)realloc(q->stack, sizeof(gap_entry_t) * q->m_entries);
+		q->stack = (gap_entry_t*)xrealloc(q->stack, sizeof(gap_entry_t) * q->m_entries);
 	}
 	p = q->stack + q->n_entries;
 	p->info = (u_int32_t)score<<21 | a<<20 | i; p->k = k; p->l = l;
@@ -111,7 +112,7 @@ bwt_aln1_t *bwt_match_gap(bwt_t *const bwts[2], int len, const ubyte_t *seq[2], 
 	bwt_aln1_t *aln;
 
 	m_aln = 4; n_aln = 0;
-	aln = (bwt_aln1_t*)calloc(m_aln, sizeof(bwt_aln1_t));
+	aln = (bwt_aln1_t*)xcalloc(m_aln, sizeof(bwt_aln1_t));
 
 	// check whether there are too many N
 	for (j = _j = 0; j < len; ++j)
@@ -187,7 +188,7 @@ bwt_aln1_t *bwt_match_gap(bwt_t *const bwts[2], int len, const ubyte_t *seq[2], 
 #endif // _REMOVE_SHADOW
 				if (n_aln == m_aln) {
 					m_aln <<= 1;
-					aln = (bwt_aln1_t*)realloc(aln, m_aln * sizeof(bwt_aln1_t));
+					aln = (bwt_aln1_t*)xrealloc(aln, m_aln * sizeof(bwt_aln1_t));
 					memset(aln + m_aln/2, 0, m_aln/2*sizeof(bwt_aln1_t));
 				}
 				p = aln + n_aln;

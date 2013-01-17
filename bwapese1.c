@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "bwatpx.h"
+#include "utils.h"
 
 extern bwa_cigar_t *refine_gapped_core(bwtint_t l_pac, const ubyte_t *pacseq, int len, const ubyte_t *seq, bwtint_t *_pos,
                                        int ext, int *n_cigar, int is_end_correct);
@@ -75,7 +76,7 @@ void bwa_rg_tpx(int iidx, const bntseq_t *bns, int n_seqs1, int n_seqs2,
 	}
 
 	// generate MD tag
-	str = (kstring_t*)calloc(1, sizeof(kstring_t));
+	str = (kstring_t*)xcalloc(1, sizeof(kstring_t));
 
 	for (i = n_seqs1; i < n_seqs2; ++i) {
 		bwa_seq_t *s = seqs + i;

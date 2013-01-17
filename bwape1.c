@@ -5,7 +5,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <time.h>
-
+#include "utils.h"
 #include "bwatpx.h"
 
 #include "khash.h"
@@ -229,7 +229,7 @@ int bwa_pe_tpx(int iidx, const bwt_t *bwt[2], int n_seqs1, int n_seqs2, bwa_seq_
 						if (ret) { // not in the hash table; ret must equal 1 as we never remove elements
 							poslist_t *z = &kh_val(g_hash[iidx], iter);
 							z->n = r->l - r->k + 1;
-							z->a = (bwtint_t*)malloc(sizeof(bwtint_t) * z->n);
+							z->a = (bwtint_t*)xmalloc(sizeof(bwtint_t) * z->n);
 							for (l = r->k; l <= r->l; ++l)
 								z->a[l - r->k] = r->a? bwt_sa(bwt[0], l) : bwt[1]->seq_len - (bwt_sa(bwt[1], l) + p[j]->len);
 						}

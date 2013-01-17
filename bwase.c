@@ -108,7 +108,7 @@ void bwa_aln2seq_core(int n_aln, const bwt_aln1_t *aln, bwa_seq_t *s, int set_ma
 		 * simply output all hits, but the following samples "rest"
 		 * number of random hits. */
 		rest = n_occ > n_multi + 1? n_multi + 1 : n_occ; // find one additional for ->sa
-		s->multi = calloc(rest, sizeof(bwt_multi1_t));
+		s->multi = xcalloc(rest, sizeof(bwt_multi1_t));
 		for (k = 0; k < n_aln; ++k) {
 			const bwt_aln1_t *q = aln + k;
 			if (q->l - q->k + 1 <= rest) {
@@ -368,16 +368,16 @@ bwa_cigar_t *refine_gapped_core(bwtint_t l_pac, const ubyte_t *pacseq, int len, 
 
 	ref_len = len + abs(ext);
 	if (ext > 0) {
-		ref_seq = (ubyte_t*)calloc(ref_len, 1);
+		ref_seq = (ubyte_t*)xcalloc(ref_len, 1);
 		for (k = __pos; k < __pos + ref_len && k < l_pac; ++k)
 			ref_seq[l++] = pacseq[k>>2] >> ((~k&3)<<1) & 3;
 	} else {
 		int64_t x = __pos + (is_end_correct? len : ref_len);
-		ref_seq = (ubyte_t*)calloc(ref_len, 1);
+		ref_seq = (ubyte_t*)xcalloc(ref_len, 1);
 		for (l = 0, k = x - ref_len > 0? x - ref_len : 0; k < x && k < l_pac; ++k)
 			ref_seq[l++] = pacseq[k>>2] >> ((~k&3)<<1) & 3;
 	}
-	path = (path_t*)calloc(l+len, sizeof(path_t));
+	path = (path_t*)xcalloc(l+len, sizeof(path_t));
 
 	aln_global_core(ref_seq, l, (ubyte_t*)seq, len, &ap, path, &path_len);
 	cigar = bwa_aln_path2cigar(path, path_len, n_cigar);
@@ -454,7 +454,7 @@ char *bwa_cal_md1(int n_cigar, bwa_cigar_t *cigar, int len, bwtint_t pos, ubyte_
 	}
 	ksprintf(str, "%d", u);
 	*_nm = nm;
-	return strdup(str->s);
+	return xstrdup(str->s);
 }
 
 void bwa_correct_trimmed(bwa_seq_t *s)
@@ -466,11 +466,11 @@ void bwa_correct_trimmed(bwa_seq_t *s)
 		} else {
 			if (s->cigar == 0) {
 				s->n_cigar = 2;
-				s->cigar = calloc(s->n_cigar, sizeof(bwa_cigar_t));
+				s->cigar = xcalloc(s->n_cigar, sizeof(bwa_cigar_t));
 				s->cigar[0] = __cigar_create(0, s->len);
 			} else {
 				++s->n_cigar;
-				s->cigar = realloc(s->cigar, s->n_cigar * sizeof(bwa_cigar_t));
+				s->cigar = xrealloc(s->cigar, s->n_cigar * sizeof(bwa_cigar_t));
 			}
 			s->cigar[s->n_cigar-1] = __cigar_create(3, (s->full_len - s->len));
 		}
@@ -480,11 +480,11 @@ void bwa_correct_trimmed(bwa_seq_t *s)
 		} else {
 			if (s->cigar == 0) {
 				s->n_cigar = 2;
-				s->cigar = calloc(s->n_cigar, sizeof(bwa_cigar_t));
+				s->cigar = xcalloc(s->n_cigar, sizeof(bwa_cigar_t));
 				s->cigar[1] = __cigar_create(0, s->len);
 			} else {
 				++s->n_cigar;
-				s->cigar = realloc(s->cigar, s->n_cigar * sizeof(bwa_cigar_t));
+				s->cigar = xrealloc(s->cigar, s->n_cigar * sizeof(bwa_cigar_t));
 				memmove(s->cigar + 1, s->cigar, (s->n_cigar-1) * sizeof(bwa_cigar_t));
 			}
 			s->cigar[0] = __cigar_create(3, (s->full_len - s->len));
@@ -523,15 +523,15 @@ void bwa_refine_gapped(const bntseq_t *bns, int n_seqs, bwa_seq_t *seqs, ubyte_t
 #endif // HAVE_PTHREAD
 
 	if (ntbns) { // in color space
-		ntpac = (ubyte_t*)calloc(ntbns->l_pac/4+1, 1);
-		rewind(ntbns->fp_pac);
-		fread(ntpac, 1, ntbns->l_pac/4 + 1, ntbns->fp_pac);
+		ntpac = (ubyte_t*)xcalloc(ntbns->l_pac/4+1, 1);
+		err_rewind(ntbns->fp_pac);
+		err_fread_noeof(ntpac, 1, ntbns->l_pac/4 + 1, ntbns->fp_pac);
 	}
 
 	if (!_pacseq) {
-		pacseq = (ubyte_t*)calloc(bns->l_pac/4+1, 1);
-		rewind(bns->fp_pac);
-		fread(pacseq, 1, bns->l_pac/4+1, bns->fp_pac);
+		pacseq = (ubyte_t*)xcalloc(bns->l_pac/4+1, 1);
+		err_rewind(bns->fp_pac);
+		err_fread_noeof(pacseq, 1, bns->l_pac/4+1, bns->fp_pac);
 	} else pacseq = _pacseq;
 
 	// tpx
@@ -625,6 +625,26 @@ static int64_t pos_5(const bwa_seq_t *p)
 	return -1;
 }
 
+void bwa_print_seq(FILE *stream, bwa_seq_t *seq) {
+	char buffer[4096];
+	const int bsz = sizeof(buffer);
+	int i, j, l;
+	
+	if (seq->strand == 0) {
+		for (i = 0; i < seq->full_len; i += bsz) {
+			l = seq->full_len - i > bsz ? bsz : seq->full_len - i;
+			for (j = 0; j < l; j++) buffer[j] = "ACGTN"[seq->seq[i + j]];
+			err_fwrite(buffer, 1, l, stream);
+		}
+	} else {
+		for (i = seq->full_len - 1; i >= 0; i -= bsz) {
+			l = i + 1 > bsz ? bsz : i + 1;
+			for (j = 0; j < l; j++) buffer[j] = "TGCAN"[seq->seq[i - j]];
+			err_fwrite(buffer, 1, l, stream);
+		}
+	}
+}
+
 void bwa_print_sam1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, int mode, int max_top2)
 {
 	int j;
@@ -654,18 +674,18 @@ void bwa_print_sam1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, i
 			} else flag |= SAM_FMU;
 		}
 
-		printf("%s\t%d\t%s\t", p->name, flag, bns->anns[seqid].name);
-		printf("%d\t%d\t", (int)(p->pos - bns->anns[seqid].offset + 1), p->mapQ);
+		err_printf("%s\t%d\t%s\t", p->name, flag, bns->anns[seqid].name);
+		err_printf("%d\t%d\t", (int)(p->pos - bns->anns[seqid].offset + 1), p->mapQ);
 
 		// print CIGAR
 		if (p->cigar) {
 			for (j = 0; j != p->n_cigar; ++j) {
-				printf("%d%c", __cigar_len(p->cigar[j]), "MIDS"[__cigar_op(p->cigar[j])]);
+				err_printf("%d%c", __cigar_len(p->cigar[j]), "MIDS"[__cigar_op(p->cigar[j])]);
 			}
 		} else if (p->type == BWA_TYPE_NO_MATCH) {
-			printf("*");
+			err_printf("*");
 		} else {
-			printf("%dM", p->len);
+			err_printf("%dM", p->len);
 		}
 
 		// print mate coordinate
@@ -675,46 +695,36 @@ void bwa_print_sam1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, i
 			am = mate->seQ < p->seQ? mate->seQ : p->seQ; // smaller single-end mapping quality
 			// redundant calculation here, but should not matter too much
 			m_is_N = bns_coor_pac2real(bns, mate->pos, mate->len, &m_seqid);
-			printf("\t%s\t", (seqid == m_seqid)? "=" : bns->anns[m_seqid].name);
+			err_printf("\t%s\t", (seqid == m_seqid)? "=" : bns->anns[m_seqid].name);
 			isize = (seqid == m_seqid)? pos_5(mate) - pos_5(p) : 0;
 			if (p->type == BWA_TYPE_NO_MATCH) isize = 0;
-			printf("%d\t%lld\t", (int)(mate->pos - bns->anns[m_seqid].offset + 1), isize);
+			err_printf("%d\t%lld\t", (int)(mate->pos - bns->anns[m_seqid].offset + 1), isize);
 		} else if (mate) {
-			printf("\t=\t%d\t0\t", (int)(p->pos - bns->anns[seqid].offset + 1));
+			err_printf("\t=\t%d\t0\t", (int)(p->pos - bns->anns[seqid].offset + 1));
 		} else {
-			printf("\t*\t0\t0\t");
+			err_printf("\t*\t0\t0\t");
 		}
 
 		// print sequence and quality
-		if (p->strand == 0) {
-			for (j = 0; j != p->full_len; ++j) {
-				putchar("ACGTN"[(int)p->seq[j]]);
-			}
-		} else {
-			for (j = 0; j != p->full_len; ++j) {
-				putchar("TGCAN"[p->seq[p->full_len - 1 - j]]);
-			}
-		}
-
-		putchar('\t');
-
+		bwa_print_seq(stdout, p);
+		err_putchar('\t');
 		if (p->qual) {
 			if (p->strand) {
 				seq_reverse(p->len, p->qual, 0); // reverse quality
 			}
-			printf("%s", p->qual);
+			err_printf("%s", p->qual);
 		} else {
-			printf("*");
+			err_printf("*");
 		}
 
 		if (bwa_rg_id) {
-			printf("\tRG:Z:%s", bwa_rg_id);
+			err_printf("\tRG:Z:%s", bwa_rg_id);
 		}
 		if (p->bc[0]) {
-			printf("\tBC:Z:%s", p->bc);
+			err_printf("\tBC:Z:%s", p->bc);
 		}
 		if (p->clip_len < p->full_len) {
-			printf("\tXC:i:%d", p->clip_len);
+			err_printf("\tXC:i:%d", p->clip_len);
 		}
 		if (p->type != BWA_TYPE_NO_MATCH) {
 			int i;
@@ -722,70 +732,64 @@ void bwa_print_sam1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, i
 			XT = "NURM"[p->type];
 			if (nn > 10) XT = 'N';
 			// print tags
-			printf("\tXT:A:%c\t%s:i:%d", XT, (mode & BWA_MODE_COMPREAD)? "NM" : "CM", p->nm);
-			if (nn) printf("\tXN:i:%d", nn);
-			if (mate) printf("\tSM:i:%d\tAM:i:%d", p->seQ, am);
+			err_printf("\tXT:A:%c\t%s:i:%d", XT, (mode & BWA_MODE_COMPREAD)? "NM" : "CM", p->nm);
+			if (nn) err_printf("\tXN:i:%d", nn);
+			if (mate) err_printf("\tSM:i:%d\tAM:i:%d", p->seQ, am);
 			if (p->type != BWA_TYPE_MATESW) { // X0 and X1 are not available for this type of alignment
-				printf("\tX0:i:%d", p->c1);
-				if (p->c1 <= max_top2) printf("\tX1:i:%d", p->c2);
+				err_printf("\tX0:i:%d", p->c1);
+				if (p->c1 <= max_top2) err_printf("\tX1:i:%d", p->c2);
 			}
-			printf("\tXM:i:%d\tXO:i:%d\tXG:i:%d", p->n_mm, p->n_gapo, p->n_gapo+p->n_gape);
-			if (p->md) printf("\tMD:Z:%s", p->md);
+			err_printf("\tXM:i:%d\tXO:i:%d\tXG:i:%d", p->n_mm, p->n_gapo, p->n_gapo+p->n_gape);
+			if (p->md) err_printf("\tMD:Z:%s", p->md);
 			// print multiple hits
 			if (p->n_multi) {
-				printf("\tXA:Z:");
+				err_printf("\tXA:Z:");
 				for (i = 0; i < p->n_multi; ++i) {
 					bwt_multi1_t *q = p->multi + i;
 					int k;
 					j = pos_end_multi(q, p->len) - q->pos;
 					nn = bns_coor_pac2real(bns, q->pos, j, &seqid);
-					printf("%s,%c%d,", bns->anns[seqid].name, q->strand? '-' : '+',
+					err_printf("%s,%c%d,", bns->anns[seqid].name, q->strand? '-' : '+',
 						   (int)(q->pos - bns->anns[seqid].offset + 1));
 					if (q->cigar) {
 						for (k = 0; k < q->n_cigar; ++k)
-							printf("%d%c", __cigar_len(q->cigar[k]), "MIDS"[__cigar_op(q->cigar[k])]);
-					} else printf("%dM", p->len);
-					printf(",%d;", q->gap + q->mm);
+							err_printf("%d%c", __cigar_len(q->cigar[k]), "MIDS"[__cigar_op(q->cigar[k])]);
+					} else err_printf("%dM", p->len);
+					err_printf(",%d;", q->gap + q->mm);
 				}
 			}
 		}
-
-		putchar('\n');
-
+		err_putchar('\n');
 	} else { // this read has no match
-
-		ubyte_t *s = p->strand? p->rseq : p->seq;
+		//ubyte_t *s = p->strand? p->rseq : p->seq;
 		int flag = p->extra_flag | SAM_FSU;
 		if (mate && mate->type == BWA_TYPE_NO_MATCH) flag |= SAM_FMU;
 
-		printf("%s\t%d\t*\t0\t0\t*\t*\t0\t0\t", p->name, flag);
-
-		for (j = 0; j != p->len; ++j) {
-			putchar("ACGTN"[(int)s[j]]);
-		}
-
-		putchar('\t');
-
+		err_printf("%s\t%d\t*\t0\t0\t*\t*\t0\t0\t", p->name, flag);
+		//Why did this work differently to the version above??
+		//for (j = 0; j != p->len; ++j) putchar("ACGTN"[(int)s[j]]);
+		bwa_print_seq(stdout, p);
+		err_putchar('\t');
 		if (p->qual) {
 			if (p->strand) {
 				seq_reverse(p->len, p->qual, 0); // reverse quality
 			}
-			printf("%s", p->qual);
+			err_printf("%s", p->qual);
 		} else {
-			printf("*");
+			err_printf("*");
 		}
 
 		if (bwa_rg_id) {
-			printf("\tRG:Z:%s", bwa_rg_id);
+			err_printf("\tRG:Z:%s", bwa_rg_id);
 		}
 		if (p->bc[0]) {
-			printf("\tBC:Z:%s", p->bc);
+			err_printf("\tBC:Z:%s", p->bc);
 		}
 		if (p->clip_len < p->full_len) {
-			printf("\tXC:i:%d", p->clip_len);
+			err_printf("\tXC:i:%d", p->clip_len);
 		}
 
-		putchar('\n');
+		err_putchar('\n');
 	}
 
 	return;
@@ -811,19 +815,19 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 	if(first){
 		first = 0;
 		samc_len = 10000;
-		sam_cigar = (char *)malloc(samc_len);
+		sam_cigar = (char *)xmalloc(samc_len);
 		if(sam_cigar == NULL){
 			fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 			exit(1);
 		}
 		sammdz_len = 10000;
-		sam_mdzstr = (char *)malloc(sammdz_len);
+		sam_mdzstr = (char *)xmalloc(sammdz_len);
 		if(sam_mdzstr == NULL){
 			fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 			exit(1);
 		}
 		sammut_len = 10000;
-		sam_mutstr = (char *)malloc(sammut_len);
+		sam_mutstr = (char *)xmalloc(sammut_len);
 		if(sam_mutstr == NULL){
 			fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 			exit(1);
@@ -863,7 +867,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = (int)strlen(p->name);
 		if(slen >= samf1_len){
 			samf1_len = slen + 10000;
-			samf1 = (char *)realloc(samf1, samf1_len);
+			samf1 = (char *)xrealloc(samf1, samf1_len);
 			if(samf1 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -876,7 +880,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = (int)strlen(bns->anns[seqid].name);
 		if(slen >= samf3_len){
 			samf3_len = slen + 10000;
-			samf3 = (char *)realloc(samf3, samf3_len);
+			samf3 = (char *)xrealloc(samf3, samf3_len);
 			if(samf3 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -916,7 +920,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 					slen += (int)strlen(tmpstr);
 					if(slen >= samc_len){
 						samc_len = slen + 10000;
-						sam_cigar = (char *)realloc(sam_cigar, samc_len);
+						sam_cigar = (char *)xrealloc(sam_cigar, samc_len);
 						if(sam_cigar == NULL){
 							fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 							exit(1);
@@ -945,7 +949,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			}
 			if(slen >= samf7_len){
 				samf7_len = slen + 10000;
-				samf7 = (char *)realloc(samf7, samf7_len);
+				samf7 = (char *)xrealloc(samf7, samf7_len);
 				if(samf7 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -968,7 +972,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = 1;
 			if(slen >= samf7_len){
 				samf7_len = slen + 10000;
-				samf7 = (char *)realloc(samf7, samf7_len);
+				samf7 = (char *)xrealloc(samf7, samf7_len);
 				if(samf7 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -984,7 +988,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = 1;
 			if(slen >= samf7_len){
 				samf7_len = slen + 10000;
-				samf7 = (char *)realloc(samf7, samf7_len);
+				samf7 = (char *)xrealloc(samf7, samf7_len);
 				if(samf7 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1001,7 +1005,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = p->full_len;
 		if(slen >= samf10_len){
 			samf10_len = slen + 10000;
-			samf10 = (char *)realloc(samf10, samf10_len);
+			samf10 = (char *)xrealloc(samf10, samf10_len);
 			if(samf10 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1025,7 +1029,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = p->len;
 			if(slen >= samf11_len){
 				samf11_len = slen + 10000;
-				samf11 = (char *)realloc(samf11, samf11_len);
+				samf11 = (char *)xrealloc(samf11, samf11_len);
 				if(samf11 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1036,7 +1040,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = 1;
 			if(slen >= samf11_len){
 				samf11_len = slen + 10000;
-				samf11 = (char *)realloc(samf11, samf11_len);
+				samf11 = (char *)xrealloc(samf11, samf11_len);
 				if(samf11 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1082,7 +1086,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 				slen = (int)strlen(p->md);
 				if(slen >= sammdz_len){
 					sammdz_len = slen + 10000;
-					sam_mdzstr = (char *)realloc(sam_mdzstr, sammdz_len);
+					sam_mdzstr = (char *)xrealloc(sam_mdzstr, sammdz_len);
 					if(sam_mdzstr == NULL){
 						fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 						exit(1);
@@ -1128,7 +1132,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 					slen = (int)strlen(tmpstr);
 					if(slen >= sammut_len){
 						sammut_len = slen + 10000;
-						sam_mutstr = (char *)realloc(sam_mutstr, sammut_len);
+						sam_mutstr = (char *)xrealloc(sam_mutstr, sammut_len);
 						if(sam_mutstr == NULL){
 							fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 							exit(1);
@@ -1140,7 +1144,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 						slen += (int)strlen(tmpstr2[num_mut]);
 						if(slen >= sammut_len){
 							sammut_len = slen + 10000;
-							sam_mutstr = (char *)realloc(sam_mutstr, sammut_len);
+							sam_mutstr = (char *)xrealloc(sam_mutstr, sammut_len);
 							if(sam_mutstr == NULL){
 								fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 								exit(1);
@@ -1154,7 +1158,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 					slen = (int)strlen(sam_cigar) + 8;
 					if(slen >= sammut_len){
 						sammut_len = slen + 10000;
-						sam_mutstr = (char *)realloc(sam_mutstr, sammut_len);
+						sam_mutstr = (char *)xrealloc(sam_mutstr, sammut_len);
 						if(sam_mutstr == NULL){
 							fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 							exit(1);
@@ -1169,7 +1173,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 				slen = (int)strlen(tmpstr);
 				if(slen >= sammdz_len){
 					sammdz_len = slen + 10000;
-					sam_mdzstr = (char *)realloc(sam_mdzstr, sammdz_len);
+					sam_mdzstr = (char *)xrealloc(sam_mdzstr, sammdz_len);
 					if(sam_mdzstr == NULL){
 						fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 						exit(1);
@@ -1226,7 +1230,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = (int)strlen(tmpstr);
 			if(slen >= sammdz_len){
 				sammdz_len = slen + 10000;
-				sam_mdzstr = (char *)realloc(sam_mdzstr, sammdz_len);
+				sam_mdzstr = (char *)xrealloc(sam_mdzstr, sammdz_len);
 				if(sam_mdzstr == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1236,10 +1240,10 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		}
 
 		if(num_mut > 0){
-			printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t%s\t%dM\t%s\n",
+			err_printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t%s\t%dM\t%s\n",
 				samf1,samf2a,samf10,samf11,samf5a,samf2b,p->full_len,samf2c,samf3,samf4,sam_mutstr,p->full_len,sam_mdzstr);
 		}else{
-			printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t0\t%dM\t%s\n",
+			err_printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t0\t%dM\t%s\n",
 				samf1,samf2a,samf10,samf11,samf5a,samf2b,p->full_len,samf2c,samf3,samf4,p->full_len,sam_mdzstr);
 		}
 
@@ -1252,7 +1256,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = (int)strlen(p->name);
 		if(slen >= samf1_len){
 			samf1_len = slen + 10000;
-			samf1 = (char *)realloc(samf1, samf1_len);
+			samf1 = (char *)xrealloc(samf1, samf1_len);
 			if(samf1 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1265,7 +1269,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = 1;
 		if(slen >= samf3_len){
 			samf3_len = slen + 10000;
-			samf3 = (char *)realloc(samf3, samf3_len);
+			samf3 = (char *)xrealloc(samf3, samf3_len);
 			if(samf3 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1281,7 +1285,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = 1;
 		if(slen >= samf6_len){
 			samf6_len = slen + 10000;
-			samf6 = (char *)realloc(samf6, samf6_len);
+			samf6 = (char *)xrealloc(samf6, samf6_len);
 			if(samf6 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1292,7 +1296,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = 1;
 		if(slen >= samf7_len){
 			samf7_len = slen + 10000;
-			samf7 = (char *)realloc(samf7, samf7_len);
+			samf7 = (char *)xrealloc(samf7, samf7_len);
 			if(samf7 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1306,7 +1310,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 		slen = p->len;
 		if(slen >= samf10_len){
 			samf10_len = slen + 10000;
-			samf10 = (char *)realloc(samf10, samf10_len);
+			samf10 = (char *)xrealloc(samf10, samf10_len);
 			if(samf10 == NULL){
 				fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 				exit(1);
@@ -1324,7 +1328,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = p->len;
 			if(slen >= samf11_len){
 				samf11_len = slen + 10000;
-				samf11 = (char *)realloc(samf11, samf11_len);
+				samf11 = (char *)xrealloc(samf11, samf11_len);
 				if(samf11 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1335,7 +1339,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			slen = 1;
 			if(slen >= samf11_len){
 				samf11_len = slen + 10000;
-				samf11 = (char *)realloc(samf11, samf11_len);
+				samf11 = (char *)xrealloc(samf11, samf11_len);
 				if(samf11 == NULL){
 					fprintf(stderr,"Error, unable to alloc mem for expanding output string\n");
 					exit(1);
@@ -1376,7 +1380,7 @@ void bwa_print_soap1a(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, 
 			samf5a = 1;
 		}
 		
-		printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t0\t%dM\t%d\n",
+		err_printf("%s/%d\t%s\t%s\t%d\t%c\t%d\t%c\t%s\t%d\t0\t%dM\t%d\n",
 			samf1,samf2a,samf10,samf11,samf5a,samf2b,p->full_len,samf2c,samf3,samf4,p->full_len,p->len);
 	}
 
@@ -1400,7 +1404,7 @@ bntseq_t *bwa_open_nt(const char *prefix)
 {
 	bntseq_t *ntbns;
 	char *str;
-	str = (char*)calloc(strlen(prefix) + 10, 1);
+	str = (char*)xcalloc(strlen(prefix) + 10, 1);
 	strcat(strcpy(str, prefix), ".nt");
 	ntbns = bns_restore(str);
 	free(str);
@@ -1416,8 +1420,8 @@ void bwa_print_sam_SQ(const bntseq_t *bns)
 	}
 
 	for (i = 0; i < bns->n_seqs; ++i)
-		printf("@SQ\tSN:%s\tLN:%d\n", bns->anns[i].name, bns->anns[i].len);
-	if (bwa_rg_line) printf("%s\n", bwa_rg_line);
+		err_printf("@SQ\tSN:%s\tLN:%d\n", bns->anns[i].name, bns->anns[i].len);
+	if (bwa_rg_line) err_printf("%s\n", bwa_rg_line);
 }
 
 void bwase_initialize() 
@@ -1448,14 +1452,14 @@ int bwa_set_rg(const char *s)
 	if (strstr(s, "@RG") != s) return -1;
 	if (bwa_rg_line) free(bwa_rg_line);
 	if (bwa_rg_id) free(bwa_rg_id);
-	bwa_rg_line = strdup(s);
+	bwa_rg_line = xstrdup(s);
 	bwa_rg_id = 0;
 	bwa_escape(bwa_rg_line);
 	p = strstr(bwa_rg_line, "\tID:");
 	if (p == 0) return -1;
 	p += 4;
 	for (q = p; *q && *q != '\t' && *q != '\n'; ++q);
-	bwa_rg_id = calloc(q - p + 1, 1);
+	bwa_rg_id = xcalloc(q - p + 1, 1);
 	for (q = p, r = bwa_rg_id; *q && *q != '\t' && *q != '\n'; ++q)
 		*r++ = *q;
 	return 0;
@@ -1516,7 +1520,7 @@ void bwa_sai2sam_se_core(const char *prefix, const char *fn_sa, const char *fn_f
 	srand48(bns->seed);
 	fp_sa = xopen(fn_sa, "r");
 
-	fread(&opt, sizeof(gap_opt_t), 1, fp_sa);
+	err_fread_noeof(&opt, sizeof(gap_opt_t), 1, fp_sa);
 	if (!(opt.mode & BWA_MODE_COMPREAD)) // in color space; initialize ntpac
 		ntbns = bwa_open_nt(prefix);
 
@@ -1599,14 +1603,14 @@ void bwa_sai2sam_se_core(const char *prefix, const char *fn_sa, const char *fn_f
 			bwa_seq_t *p = seqs[nexti1] + i;
 			int n_aln;
 
-			fread(&n_aln, 4, 1, fp_sa);
+			err_fread_noeof(&n_aln, 4, 1, fp_sa);
 
 			if (n_aln > m_aln) {
 				m_aln = n_aln;
-				aln = (bwt_aln1_t*)realloc(aln, sizeof(bwt_aln1_t) * m_aln);
+				aln = (bwt_aln1_t*)xrealloc(aln, sizeof(bwt_aln1_t) * m_aln);
 			}
 
-			fread(aln, sizeof(bwt_aln1_t), n_aln, fp_sa);
+			err_fread_noeof(aln, sizeof(bwt_aln1_t), n_aln, fp_sa);
 
 			bwa_aln2seq_core(n_aln, aln, p, 1, n_occ);
 		}
@@ -1688,7 +1692,7 @@ void bwa_sai2sam_se_core(const char *prefix, const char *fn_sa, const char *fn_f
 	bwa_seq_close(ks);
 	if (ntbns) bns_destroy(ntbns);
 	bns_destroy(bns);
-	fclose(fp_sa);
+	err_fclose(fp_sa);
 
 	return;
 }
@@ -1741,7 +1745,7 @@ int bwa_sai2sam_se(int argc, char *argv[])
 	}
 
 	bwa_sai2sam_se_core(argv[optind], argv[optind+1], argv[optind+2], n_occ);
-
+	err_fflush(stdout);
 	free(bwa_rg_line); free(bwa_rg_id);
 
 	// cant use getrusage for ru.maxrss until kernel 2.6.36 ...
