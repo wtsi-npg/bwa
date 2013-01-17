@@ -54,7 +54,7 @@ int bwa_index(int argc, char *argv[])
 			else if (strcmp(optarg, "is") == 0) algo_type = 3;
 			else err_fatal(__func__, "unknown algorithm: '%s'.", optarg);
 			break;
-		case 'p': prefix = strdup(optarg); break;
+		case 'p': prefix = xstrdup(optarg); break;
 		case 'c': is_color = 1; break;
 		default: return 1;
 		}
@@ -71,10 +71,10 @@ int bwa_index(int argc, char *argv[])
 		fprintf(stderr, "         according to the length of the genome.\n\n");
 		return 1;
 	}
-	if (prefix == 0) prefix = strdup(argv[optind]);
-	str  = (char*)calloc(strlen(prefix) + 10, 1);
-	str2 = (char*)calloc(strlen(prefix) + 10, 1);
-	str3 = (char*)calloc(strlen(prefix) + 10, 1);
+	if (prefix == 0) prefix = xstrdup(argv[optind]);
+	str  = (char*)xcalloc(strlen(prefix) + 10, 1);
+	str2 = (char*)xcalloc(strlen(prefix) + 10, 1);
+	str3 = (char*)xcalloc(strlen(prefix) + 10, 1);
 
 	if (is_color == 0) { // nucleotide indexing
 		gzFile fp = xzopen(argv[optind], "r");
@@ -82,7 +82,7 @@ int bwa_index(int argc, char *argv[])
 		fprintf(stderr, "[bwa_index] Pack FASTA... ");
 		l_pac = bns_fasta2bntseq(fp, prefix);
 		fprintf(stderr, "%.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-		gzclose(fp);
+		err_gzclose(fp);
 	} else { // color indexing
 		gzFile fp = xzopen(argv[optind], "r");
 		strcat(strcpy(str, prefix), ".nt");
@@ -90,7 +90,7 @@ int bwa_index(int argc, char *argv[])
 		fprintf(stderr, "[bwa_index] Pack nucleotide FASTA... ");
 		l_pac = bns_fasta2bntseq(fp, str);
 		fprintf(stderr, "%.2f sec\n", (float)(clock() - t) / CLOCKS_PER_SEC);
-		gzclose(fp);
+		err_gzclose(fp);
 		{
 			char *tmp_argv[3];
 			tmp_argv[0] = argv[0]; tmp_argv[1] = str; tmp_argv[2] = prefix;
