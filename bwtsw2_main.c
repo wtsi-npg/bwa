@@ -34,6 +34,7 @@ int bwa_bwtsw2(int argc, char *argv[])
 		case 'N': opt->t_seeds = atoi(optarg); break;
 		case 'H': opt->hard_clip = 1; break;
 		case 'f': xreopen(optarg, "w", stdout); break;
+		default: return 1;
 		}
 	}
 	opt->qr = opt->q + opt->r;
