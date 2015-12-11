@@ -6,14 +6,12 @@
 #include "bwt.h"
 #include "bwtsw2.h"
 #include "utils.h"
+#include "bwa.h"
 
 int bwa_bwtsw2(int argc, char *argv[])
 {
-	extern char *bwa_infer_prefix(const char *hint);
 	bsw2opt_t *opt;
-	bwt_t *target;
-	char buf[1024], *prefix;
-	bntseq_t *bns;
+	bwaidx_t *idx;
 	int c;
 
 	opt = bsw2_init_opt();
@@ -39,6 +37,7 @@ int bwa_bwtsw2(int argc, char *argv[])
 		case 'S': opt->skip_sw = 1; break;
 		case 'C': opt->cpy_cmt = 1; break;
 		case 'G': opt->max_chain_gap = atoi(optarg); break;
+		default: return 1;
 		}
 	}
 	opt->qr = opt->q + opt->r;
@@ -81,19 +80,10 @@ int bwa_bwtsw2(int argc, char *argv[])
 	opt->t *= opt->a;
 	opt->coef *= opt->a;
 
-	if ((prefix = bwa_infer_prefix(argv[optind])) == 0) {
-		fprintf(stderr, "[%s] fail to locate the index\n", __func__);
-		return 0;
-	}
-	strcpy(buf, prefix); target = bwt_restore_bwt(strcat(buf, ".bwt"));
-	strcpy(buf, prefix); bwt_restore_sa(strcat(buf, ".sa"), target);
-	bns = bns_restore(prefix);
-
-	bsw2_aln(opt, bns, target, argv[optind+1], optind+2 < argc? argv[optind+2] : 0);
-
-	bns_destroy(bns);
-	bwt_destroy(target);
-	free(opt); free(prefix);
+	if ((idx = bwa_idx_load(argv[optind], BWA_IDX_BWT|BWA_IDX_BNS)) == 0) return 1;
+	bsw2_aln(opt, idx->bns, idx->bwt, argv[optind+1], optind+2 < argc? argv[optind+2] : 0);
+	bwa_idx_destroy(idx);
+	free(opt);
 	
 	return 0;
 }
