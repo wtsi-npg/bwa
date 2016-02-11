@@ -4,7 +4,7 @@
 #include "utils.h"
 
 #ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION "0.7.12-r1039-wtsi_patchFeb1016"
+#define PACKAGE_VERSION "0.7.12-r1039-wtsi_patchFeb2016"
 #endif
 
 int bwa_fa2pac(int argc, char *argv[]);
